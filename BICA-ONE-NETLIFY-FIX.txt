@@ -1,0 +1,1 @@
+BICA ONE Netlify runtime fix. Upload this ZIP as a new production deploy. Keep existing environment variables. The Agent function now explicitly configures the OpenAI key, accepts SUPABASE_ANON_KEY or SUPABASE_PUBLISHABLE_KEY, logs runtime errors server-side, and the UI reports the actual HTTP/body error instead of hiding it behind Agent request failed.

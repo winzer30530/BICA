@@ -1,0 +1,15 @@
+[build]
+  base = "."
+  command = "npm install && npm run build:web"
+  publish = "apps/desktop/dist"
+  functions = "apps/desktop/netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
