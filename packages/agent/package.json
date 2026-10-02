@@ -1,6 +1,0 @@
-{
-  "name":"bica-one","private":true,"version":"1.0.0",
-  "workspaces":["apps/desktop","packages/agent"],
-  "scripts":{"build:web":"npm run build:web -w @bica/desktop","typecheck":"npm run typecheck -w @bica/desktop && npm run typecheck -w @bica/agent"},
-  "engines":{"node":">=20"}
-}
