@@ -1,0 +1,15 @@
+{
+  "name": "@bica/agent",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "4.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}
