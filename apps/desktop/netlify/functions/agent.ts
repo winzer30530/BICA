@@ -15,6 +15,7 @@ const toolSchemas:Record<string,any>={
  search_students:{type:'object',properties:{course:{type:'string',description:'Course code such as DCA or ADCA'},name:{type:'string',description:'Student name'}},additionalProperties:false},
  get_pending_fees:{type:'object',properties:{month:{type:'string',pattern:'^\\d{4}-(0[1-9]|1[0-2])$'},course:{type:'string'}},required:['month'],additionalProperties:false},
  list_courses:{type:'object',properties:{},required:[],additionalProperties:false},
+ list_batches:{type:'object',properties:{course:{type:'string'}},additionalProperties:false},
  record_fee:{type:'object',properties:{studentId:{type:'string'},month:{type:'string',pattern:'^\\d{4}-(0[1-9]|1[0-2])$'},amount:{type:'number',minimum:0},status:{type:'string',enum:['paid','pending']}},required:['studentId','month','amount','status'],additionalProperties:false},
  create_student:{type:'object',properties:{fullName:{type:'string',minLength:2},phone:{type:'string'},guardianPhone:{type:'string'},courseId:{type:'string'},batchId:{type:'string'},status:{type:'string',enum:['active','completed','paused','left']}},required:['fullName'],additionalProperties:false},
  update_student:{type:'object',properties:{studentId:{type:'string'},fullName:{type:'string'},phone:{type:'string'},guardianPhone:{type:'string'},courseId:{type:'string'},batchId:{type:'string'},status:{type:'string',enum:['active','completed','paused','left']}},required:['studentId'],additionalProperties:false},
@@ -32,6 +33,8 @@ const toolMeta:Record<string,{description:string;write:boolean}>= {
  record_fee:{description:'Mark a monthly student fee paid or pending. Requires human confirmation.',write:true},
  create_student:{description:'Create a BICA student record. Requires human confirmation.',write:true},
  update_student:{description:'Update an existing BICA student record. Requires human confirmation.',write:true},
+ delete_student:{description:'Remove an existing BICA student record. Requires human confirmation.',write:true},
+ list_batches:{description:'List the available BICA student batches, optionally filtered by course code.',write:false},
  record_attendance:{description:'Record or correct one student attendance. Requires human confirmation.',write:true},
  attendance_summary:{description:'Get attendance percentage and records for a month.',write:false},
  create_exam:{description:'Create an exam for a BICA course. Requires human confirmation.',write:true},
@@ -59,8 +62,10 @@ export default async(req:Request)=>{
   async pendingFees({month,course}){const l=rows(await c.from('fee_payments').select('id,student_id,month,amount,status,students(id,full_name,courses(code,name))').eq('month',first(month)).eq('status','pending')) as any[];return course?l.filter(r=>r.students?.courses?.code?.toLowerCase()===course.toLowerCase()):l;},
   async recordFee(a){const paid_on=a.status==='paid'?new Date().toISOString().slice(0,10):null;rows(await c.from('fee_payments').upsert({student_id:a.studentId,month:first(a.month),amount:a.amount,status:a.status,paid_on,recorded_by:u.user.id},{onConflict:'student_id,month'}));return rows(await c.from('fee_payments').select('student_id,month,amount,status,paid_on').eq('student_id',a.studentId).eq('month',first(a.month)).single());},
   async listCourses(){return rows(await c.from('courses').select('*').eq('active',true).order('code'));},
+  async listBatches({course}){const l=rows(await c.from('batches').select('id,name,course_id,courses(code,name)').order('name')) as any[];return course?l.filter(r=>r.courses?.code?.toLowerCase()===course.toLowerCase()):l;},
   async createStudent(a){return rows(await c.from('students').insert({full_name:a.fullName,phone:a.phone,guardian_phone:a.guardianPhone,course_id:a.courseId,batch_id:a.batchId,status:a.status??'active'}).select().single());},
   async updateStudent(a){const{studentId,...patch}=a;return rows(await c.from('students').update(patch).eq('id',studentId).select().single());},
+  async deleteStudent({studentId}){const existing=rows(await c.from('students').select('id,full_name').eq('id',studentId).single());rows(await c.from('students').delete().eq('id',studentId));return {deleted:true,student:existing};},
   async recordAttendance(a){return rows(await c.from('attendance').upsert({student_id:a.studentId,day:a.day,status:a.status},{onConflict:'student_id,day'}).select().single());},
   async attendanceSummary({studentId,month}){const start=first(month);const end=new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).toISOString().slice(0,10);let q=c.from('attendance').select('student_id,day,status').gte('day',start).lte('day',end);if(studentId)q=q.eq('student_id',studentId);const l=await rows(await q) as any[];const counts={present:0,absent:0,late:0,excused:0};for(const r of l)counts[r.status as keyof typeof counts]++;const counted=counts.present+counts.absent+counts.late;return{month,records:l,counts,percentage:counted?Math.round(((counts.present+counts.late)/counted)*10000)/100:0};},
   async createExam(a){return rows(await c.from('exams').insert({course_id:a.courseId,title:a.title,kind:a.kind,total_marks:a.totalMarks,held_on:a.heldOn}).select().single());},
@@ -77,9 +82,11 @@ export default async(req:Request)=>{
    case 'search_students':out=await db.searchStudents(normalized);break;
    case 'get_pending_fees':out=await db.pendingFees(normalized);break;
    case 'list_courses':out=await db.listCourses();break;
+   case 'list_batches':out=await db.listBatches(normalized);break;
    case 'record_fee':out=await db.recordFee(normalized);break;
    case 'create_student':out=await db.createStudent(normalized);break;
    case 'update_student':out=await db.updateStudent(normalized);break;
+   case 'delete_student':out=await db.deleteStudent(normalized);break;
    case 'record_attendance':out=await db.recordAttendance(normalized);break;
    case 'attendance_summary':out=await db.attendanceSummary(normalized);break;
    case 'create_exam':out=await db.createExam(normalized);break;
