@@ -11,9 +11,9 @@ export interface Db {
   createStudent(q: { fullName:string; phone?:string | null; guardianPhone?:string | null; courseId?:string | null; batchId?:string | null; status?:'active'|'completed'|'paused'|'left' | null }): Promise<unknown>;
   updateStudent(q: { studentId:string; fullName?:string | null; phone?:string | null; guardianPhone?:string | null; courseId?:string | null; batchId?:string | null; status?:'active'|'completed'|'paused'|'left' | null }): Promise<unknown>;
   recordAttendance(q: { studentId:string; day:string; status:'present'|'absent'|'late'|'excused' }): Promise<unknown>;
-  attendanceSummary(q: { studentId?:string; month:string }): Promise<unknown>;
+  attendanceSummary(q: { studentId?:string | null; month:string }): Promise<unknown>;
   createExam(q: { courseId?:string | null; title:string; kind:'mcq'|'practical'|'written'; totalMarks?:number | null; heldOn?:string | null }): Promise<unknown>;
-  addQuestion(q: { examId:string; body:string; options?:unknown; answer?:string; marks?:number }): Promise<unknown>;
+  addQuestion(q: { examId:string; body:string; options?:unknown; answer?:string | null; marks?:number | null }): Promise<unknown>;
   recordResult(q: { examId:string; studentId:string; marks:number }): Promise<unknown>;
 }
 const def = <S extends z.ZodObject<any>>(d: BicaToolDef<S>) => d;
