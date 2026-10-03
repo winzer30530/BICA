@@ -4,15 +4,15 @@ export type Role = 'owner' | 'teacher';
 export type Risk = 'read' | 'write' | 'destructive' | 'external';
 export interface ToolContext { role: Role; db: Db; audit: (entry: { tool: string; args: unknown; ok: boolean; detail?: string }) => Promise<void>; }
 export interface Db {
-  searchStudents(q: { course?: string; name?: string }): Promise<unknown[]>;
-  pendingFees(q: { month: string; course?: string }): Promise<unknown[]>;
+  searchStudents(q: { course?: string | null; name?: string | null }): Promise<unknown[]>;
+  pendingFees(q: { month: string; course?: string | null }): Promise<unknown[]>;
   recordFee(q: { studentId: string; month: string; amount: number; status: 'paid' | 'pending' }): Promise<unknown>;
   listCourses(): Promise<unknown[]>;
-  createStudent(q: { fullName:string; phone?:string; guardianPhone?:string; courseId?:string; batchId?:string; status?:'active'|'completed'|'paused'|'left' }): Promise<unknown>;
-  updateStudent(q: { studentId:string; fullName?:string; phone?:string; guardianPhone?:string; courseId?:string; batchId?:string; status?:'active'|'completed'|'paused'|'left' }): Promise<unknown>;
+  createStudent(q: { fullName:string; phone?:string | null; guardianPhone?:string | null; courseId?:string | null; batchId?:string | null; status?:'active'|'completed'|'paused'|'left' | null }): Promise<unknown>;
+  updateStudent(q: { studentId:string; fullName?:string | null; phone?:string | null; guardianPhone?:string | null; courseId?:string | null; batchId?:string | null; status?:'active'|'completed'|'paused'|'left' | null }): Promise<unknown>;
   recordAttendance(q: { studentId:string; day:string; status:'present'|'absent'|'late'|'excused' }): Promise<unknown>;
   attendanceSummary(q: { studentId?:string; month:string }): Promise<unknown>;
-  createExam(q: { courseId?:string; title:string; kind:'mcq'|'practical'|'written'; totalMarks?:number; heldOn?:string }): Promise<unknown>;
+  createExam(q: { courseId?:string | null; title:string; kind:'mcq'|'practical'|'written'; totalMarks?:number | null; heldOn?:string | null }): Promise<unknown>;
   addQuestion(q: { examId:string; body:string; options?:unknown; answer?:string; marks?:number }): Promise<unknown>;
   recordResult(q: { examId:string; studentId:string; marks:number }): Promise<unknown>;
 }
