@@ -67,7 +67,7 @@ function makeDb(c: SupabaseClient): Db {
       return rows(await c.from('attendance').select('id,student_id,day,status').eq('student_id', studentId).eq('day', day).single());
     },
     async attendanceSummary({ studentId, month }) {
-      let q = c.from('attendance').select('id,student_id,day,status').gte('day', `\${month}-01`).lt('day', `\${month}-32`);
+      let q = c.from('attendance').select('id,student_id,day,status').gte('day', `${month}-01`).lt('day', `${month}-32`);
       if (studentId) q = q.eq('student_id', studentId);
       return rows(await q);
     },
