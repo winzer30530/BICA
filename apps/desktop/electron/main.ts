@@ -25,7 +25,7 @@ function makeDb(c: SupabaseClient): Db {
   return {
     async searchStudents({ course, name }) {
       let q = c.from('students').select('id,full_name,phone,status,courses(code)').limit(50);
-      if (name) q = q.ilike('full_name', `%${name}%`);
+      if (name) q = q.ilike('full_name', `%\${name}%\`);
       const list = rows(await q) as any[];
       return course ? list.filter(r => r.courses?.code?.toLowerCase() === course.toLowerCase()) : list;
     },
@@ -36,9 +36,65 @@ function makeDb(c: SupabaseClient): Db {
     async recordFee({ studentId, month, amount, status }) {
       const paid_on = status === 'paid' ? new Date().toISOString().slice(0, 10) : null;
       rows(await c.from('fee_payments').upsert({ student_id: studentId, month: first(month), amount, status, paid_on }, { onConflict: 'student_id,month' }));
-      // Read back so the agent can verify the write.
       return rows(await c.from('fee_payments').select('student_id,month,amount,status,paid_on').eq('student_id', studentId).eq('month', first(month)).single());
     },
+    async listCourses() {
+      return rows(await c.from('courses').select('id,code,name,fee,duration,modules').eq('active', true).order('code')) as unknown[];
+    },
+    async createStudent({ fullName, phone, guardianPhone, courseId, batchId, status }) {
+      const result = rows(await c.from('students').insert({
+        full_name: fullName,
+        phone: phone ?? null,
+        guardian_phone: guardianPhone ?? null,
+        course_id: courseId ?? null,
+        batch_id: batchId ?? null,
+        status: status ?? 'active'
+      }).select('id,full_name,phone,guardian_phone,course_id,batch_id,status').single());
+      return result;
+    },
+    async updateStudent({ studentId, fullName, phone, guardianPhone, courseId, batchId, status }) {
+      const patch: Record<string, unknown> = {};
+      if (fullName !== undefined && fullName !== null) patch.full_name = fullName;
+      if (phone !== undefined) patch.phone = phone;
+      if (guardianPhone !== undefined) patch.guardian_phone = guardianPhone;
+      if (courseId !== undefined) patch.course_id = courseId;
+      if (batchId !== undefined) patch.batch_id = batchId;
+      if (status !== undefined && status !== null) patch.status = status;
+      return rows(await c.from('students').update(patch).eq('id', studentId).select('id,full_name,phone,guardian_phone,course_id,batch_id,status').single());
+    },
+    async recordAttendance({ studentId, day, status }) {
+      rows(await c.from('attendance').upsert({ student_id: studentId, day, status }, { onConflict: 'student_id,day' }));
+      return rows(await c.from('attendance').select('id,student_id,day,status').eq('student_id', studentId).eq('day', day).single());
+    },
+    async attendanceSummary({ studentId, month }) {
+      let q = c.from('attendance').select('id,student_id,day,status').gte('day', `\${month}-01`).lt('day', `\${month}-32`);
+      if (studentId) q = q.eq('student_id', studentId);
+      return rows(await q);
+    },
+    async createExam({ courseId, title, kind, totalMarks, heldOn }) {
+      return rows(await c.from('exams').insert({
+        course_id: courseId ?? null,
+        title,
+        kind,
+        total_marks: totalMarks ?? null,
+        held_on: heldOn ?? null
+      }).select('id,course_id,title,kind,total_marks,held_on').single());
+    },
+    async addQuestion({ examId, body, options, answer, marks }) {
+      return rows(await c.from('exam_questions').insert({
+        exam_id: examId,
+        body,
+        options: options ?? null,
+        answer: answer ?? null,
+        marks: marks ?? null
+      }).select('id,exam_id,body,options,answer,marks').single());
+    },
+    async recordResult({ examId, studentId, marks }) {
+      return rows(await c.from('exam_results').upsert(
+        { exam_id: examId, student_id: studentId, marks },
+        { onConflict: 'exam_id,student_id' }
+      ).select('id,exam_id,student_id,marks').single());
+    }
   };
 }
 
