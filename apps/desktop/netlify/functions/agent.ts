@@ -49,11 +49,12 @@ function clean(v:any){return v===null?undefined:v;}
 export default async(req:Request)=>{
  if(req.method!=='POST')return json({type:'error',text:'POST only'},405);
  const {OPENROUTER_API_KEY,OPENROUTER_MODEL,SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_PUBLISHABLE_KEY}=process.env;
- const supabaseKey=SUPABASE_ANON_KEY||SUPABASE_PUBLISHABLE_KEY;
- if(!OPENROUTER_API_KEY||!SUPABASE_URL||!supabaseKey)return json({type:'error',text:'BICA server configuration is incomplete. Add OPENROUTER_API_KEY, SUPABASE_URL and a Supabase client key in Netlify Functions environment variables, then redeploy.'},500);
+ const resolvedSupabaseUrl=SUPABASE_URL||'https://ecfnhfclugdejuymwrit.supabase.co';
+ const supabaseKey=SUPABASE_ANON_KEY||SUPABASE_PUBLISHABLE_KEY||'sb_publishable_JHWj01gE--cInU4kC9aQeQ_2yiJjd7w';
+ if(!OPENROUTER_API_KEY)return json({type:'error',text:'BICA AI is not configured yet. Add OPENROUTER_API_KEY to the Vercel project environment variables.'},500);
  const token=(req.headers.get('authorization')??'').replace(/^Bearer /,'');
  if(!token)return json({type:'error',text:'A BICA staff session is required.'},401);
- const c=createClient(SUPABASE_URL,supabaseKey,{global:{headers:{Authorization:`Bearer ${token}`}}});
+ const c=createClient(resolvedSupabaseUrl,supabaseKey,{global:{headers:{Authorization:`Bearer ${token}`}}});
  const {data:u}=await c.auth.getUser(token); if(!u.user)return json({type:'error',text:'Session expired.'},401);
  const prof=await c.from('profiles').select('full_name,role').eq('id',u.user.id).single();
  if(prof.error)return json({type:'error',text:'No BICA staff profile for this account.'},403);
